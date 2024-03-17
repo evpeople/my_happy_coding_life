@@ -1,0 +1,43 @@
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# Visual Studio Code
+.vscode/
+
+# 其他一些常见的IDE和编辑器临时文件
+*.sublime-workspace
+*.sublime-project
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# Vim
+*.swp
+*.swo
+
+# macOS 文件系统
+.DS_Store
+
+# Windows 文件系统
+Thumbs.db
+Desktop.ini
+
+# Linux
+.*.swp
+.*.swo
+*~
+
+# Node modules
+node_modules/
+
+# 构建输出
+/dist
+/build
+/out
+
+# 日志文件
+*.log
+
