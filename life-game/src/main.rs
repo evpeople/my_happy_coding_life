@@ -224,14 +224,14 @@ struct Args {
     #[arg(long = "basic-seed", value_name = "BASIC_SEED")]
     basic_seed: Option<usize>,
     /// Sets the basic speed for the program
-    #[arg(long , value_name = "speed", default_value_t = 100)]
+    #[arg(long, value_name = "speed", default_value_t = 100)]
     speed: usize,
     /// Sets the symbol for dead cells
-    #[arg(long, value_name = "DEAD", default_value = "🤍")]
+    #[arg(long, value_name = "DEAD", default_value = " ")]
     dead: String,
 
     /// Sets the symbol for alive cells
-    #[arg(long, value_name = "ALIVE", default_value = "🩷")]
+    #[arg(long, value_name = "ALIVE", default_value = "X")]
     alive: String,
 }
 
@@ -244,7 +244,7 @@ fn main() -> io::Result<()> {
     let basic_seed = args.basic_seed;
     let alive = args.alive;
     let dead = args.dead;
-    let seed = make_seed(width, height, total_cell,basic_seed);
+    let seed = make_seed(width, height, total_cell, basic_seed);
     let mut cound = 0;
     let mut world = World::new(width, height, seed, dead, alive);
     world.clean();
@@ -276,7 +276,10 @@ fn main() -> io::Result<()> {
             world.update();
             if world.draw() {
                 cound += 1;
-                println!("\n\n q键退出，p键暂停，暂停后输入任意键，手动执行， 当前迭代count:{} 次", cound);
+                println!(
+                    "\n\n q键退出，p键暂停，暂停后输入任意键，手动执行， 当前迭代count:{} 次",
+                    cound
+                );
             } else {
                 break;
             }

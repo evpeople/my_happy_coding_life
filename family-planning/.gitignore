@@ -37,6 +37,7 @@ node_modules/
 /dist
 /build
 /out
+/target
 
 # 日志文件
 *.log
