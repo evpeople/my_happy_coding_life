@@ -1,89 +1,3 @@
---[[
-
-=====================================================================
-==================== READ THIS BEFORE CONTINUING ====================
-=====================================================================
-========                                    .-----.          ========
-========         .----------------------.   | === |          ========
-========         |.-""""""""""""""""""-.|   |-----|          ========
-========         ||                    ||   | === |          ========
-========         ||   KICKSTART.NVIM   ||   |-----|          ========
-========         ||                    ||   | === |          ========
-========         ||                    ||   |-----|          ========
-========         ||:Tutor              ||   |:::::|          ========
-========         |'-..................-'|   |____o|          ========
-========         `"")----------------(""`   ___________      ========
-========        /::::::::::|  |::::::::::\  \ no mouse \     ========
-========       /:::========|  |==hjkl==:::\  \ required \    ========
-========      '""""""""""""'  '""""""""""""'  '""""""""""'   ========
-========                                                     ========
-=====================================================================
-=====================================================================
-
-What is Kickstart?
-
-  Kickstart.nvim is *not* a distribution.
-
-  Kickstart.nvim is a starting point for your own configuration.
-    The goal is that you can read every line of code, top-to-bottom, understand
-    what your configuration is doing, and modify it to suit your needs.
-
-    Once you've done that, you can start exploring, configuring and tinkering to
-    make Neovim your own! That might mean leaving kickstart just the way it is for a while
-    or immediately breaking it into modular pieces. It's up to you!
-
-    If you don't know anything about Lua, I recommend taking some time to read through
-    a guide. One possible example which will only take 10-15 minutes:
-      - https://learnxinyminutes.com/docs/lua/
-
-    After understanding a bit more about Lua, you can use `:help lua-guide` as a
-    reference for how Neovim integrates Lua.
-    - :help lua-guide
-    - (or HTML version): https://neovim.io/doc/user/lua-guide.html
-
-Kickstart Guide:
-
-  TODO: The very first thing you should do is to run the command `:Tutor` in Neovim.
-
-    If you don't know what this means, type the following:
-      - <escape key>
-      - :
-      - Tutor
-      - <enter key>
-
-    (If you already know how the Neovim basics, you can skip this step)
-
-  Once you've completed that, you can continue working through **AND READING** the rest
-  of the kickstart init.lua
-
-  Next, run AND READ `:help`.
-    This will open up a help window with some basic information
-    about reading, navigating and searching the builtin help documentation.
-
-    This should be the first place you go to look when you're stuck or confused
-    with something. It's one of my favorite neovim features.
-
-    MOST IMPORTANTLY, we provide a keymap "<space>sh" to [s]earch the [h]elp documentation,
-    which is very useful when you're not sure exactly what you're looking for.
-
-  I have left several `:help X` comments throughout the init.lua
-    These are hints about where to find more information about the relevant settings,
-    plugins or neovim features used in kickstart.
-
-   NOTE: Look for lines like this
-
-    Throughout the file. These are for you, the reader, to help understand what is happening.
-    Feel free to delete them once you know what you're doing, but they should serve as a guide
-    for when you are first encountering a few different constructs in your nvim config.
-
-If you experience any errors while trying to install kickstart, run `:checkhealth` for more info
-
-I hope you enjoy your Neovim journey,
-- TJ
-
-P.S. You can delete this when you're done too. It's your config now! :)
---]]
-
 -- Set <space> as the leader key
 -- See `:help mapleader`
 --  NOTE: Must happen before plugins are loaded (otherwise wrong leader will be used)
@@ -91,7 +5,7 @@ vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
 -- Set to true if you have a Nerd Font installed
-vim.g.have_nerd_font = false
+vim.g.have_nerd_font = true
 
 -- [[ Setting options ]]
 -- See `:help vim.opt`
@@ -227,7 +141,396 @@ vim.opt.rtp:prepend(lazypath)
 require('lazy').setup({
   -- NOTE: Plugins can be added with a link (or for a github repo: 'owner/repo' link).
   'tpope/vim-sleuth', -- Detect tabstop and shiftwidth automatically
-
+  {
+    'rcarriga/nvim-notify',
+    opts = {
+      timeout = 3000,
+      max_height = function()
+        return math.floor(vim.o.lines * 0.75)
+      end,
+      max_width = function()
+        return math.floor(vim.o.columns * 0.75)
+      end,
+      on_open = function(win)
+        vim.api.nvim_win_set_config(win, { zindex = 100 })
+      end,
+    },
+  },
+  { 'lukas-reineke/indent-blankline.nvim', main = 'ibl', opts = {} },
+  { 'nvim-neotest/nvim-nio' },
+  {
+    'nvim-lualine/lualine.nvim',
+    dependencies = { 'nvim-tree/nvim-web-devicons' },
+  },
+  {
+    'nvimdev/dashboard-nvim',
+    event = 'VimEnter',
+    config = function()
+      require('dashboard').setup {
+        -- config
+      }
+    end,
+    dependencies = { { 'nvim-tree/nvim-web-devicons' } },
+  },
+  -- lazy.nvim
+  {
+    'folke/noice.nvim',
+    event = 'VeryLazy',
+    opts = {
+      -- add any options here
+    },
+    dependencies = {
+      -- if you lazy-load any plugin below, make sure to add proper `module="..."` entries
+      'MunifTanjim/nui.nvim',
+      -- OPTIONAL:
+      --   `nvim-notify` is only needed, if you want to use the notification view.
+      --   If not available, we use `mini` as the fallback
+      'rcarriga/nvim-notify',
+    },
+ config=function()
+   require('noice').setup {
+      lsp = {
+        -- override markdown rendering so that **cmp** and other plugins use **Treesitter**
+        override = {
+          ['vim.lsp.util.convert_input_to_markdown_lines'] = true,
+          ['vim.lsp.util.stylize_markdown'] = true,
+          ['cmp.entry.get_documentation'] = true, -- requires hrsh7th/nvim-cmp
+        },
+      },
+      -- you can enable a preset for easier configuration
+      presets = {
+        bottom_search = true, -- use a classic bottom cmdline for search
+        command_palette = true, -- position the cmdline and popupmenu together
+        long_message_to_split = true, -- long messages will be sent to a split
+        inc_rename = false, -- enables an input dialog for inc-rename.nvim
+        lsp_doc_border = false, -- add a border to hover docs and signature help
+      },
+    }
+  end,
+  },
+  {
+    'folke/trouble.nvim',
+    dependencies = { 'nvim-tree/nvim-web-devicons' },
+    opts = {
+      -- your configuration comes here
+      -- or leave it empty to use the default settings
+      -- refer to the configuration section below
+      theme = 'OceanicNext',
+    },
+    config = function()
+      require('trouble').setup {}
+      -- Lua
+      vim.keymap.set('n', '<leader>xx', function()
+        require('trouble').toggle()
+      end)
+      vim.keymap.set('n', '<leader>xw', function()
+        require('trouble').toggle 'workspace_diagnostics'
+      end)
+      vim.keymap.set('n', '<leader>xd', function()
+        require('trouble').toggle 'document_diagnostics'
+      end)
+      vim.keymap.set('n', '<leader>xq', function()
+        require('trouble').toggle 'quickfix'
+      end)
+      vim.keymap.set('n', '<leader>xl', function()
+        require('trouble').toggle 'loclist'
+      end)
+      vim.keymap.set('n', 'gR', function()
+        require('trouble').toggle 'lsp_references'
+      end)
+    end,
+  },
+  {
+    'nvim-neo-tree/neo-tree.nvim',
+    branch = 'v3.x',
+    dependencies = {
+      'nvim-lua/plenary.nvim',
+      'nvim-tree/nvim-web-devicons', -- not strictly required, but recommended
+      'MunifTanjim/nui.nvim',
+      '3rd/image.nvim', -- Optional image support in preview window: See `# Preview Mode` for more information
+      {
+        -- 窗口管理器，作为其他功能的后端
+        's1n7ax/nvim-window-picker',
+        version = '2.*', -- 指定版本
+        config = function()
+          require('window-picker').setup {
+            autoselect_one = true,
+            include_current_win = false,
+            filter_rules = {
+              bo = {
+                filetype = { 'neo-tree', 'neo-tree-popup', 'notify' },
+                buftype = { 'terminal', 'quickfix' },
+              },
+            },
+          }
+        end,
+      },
+    },
+    config = function(self, opts)
+      -- Diagnostic 图标配置
+      vim.fn.sign_define('DiagnosticSignError', { text = ' ', texthl = 'DiagnosticSignError' })
+      vim.fn.sign_define('DiagnosticSignWarn', { text = ' ', texthl = 'DiagnosticSignWarn' })
+      vim.fn.sign_define('DiagnosticSignInfo', { text = ' ', texthl = 'DiagnosticSignInfo' })
+      vim.fn.sign_define('DiagnosticSignHint', { text = '󰌵', texthl = 'DiagnosticSignHint' })
+      require('neo-tree').setup {
+        close_if_last_window = false, -- Close Neo-tree if it is the last window left in the tab
+        popup_border_style = 'rounded',
+        enable_git_status = true,
+        enable_diagnostics = true,
+        open_files_do_not_replace_types = { 'terminal', 'trouble', 'qf' }, -- when opening files, do not use windows containing these filetypes or buftypes , 如果当前窗口是 {}中的值，则不会被替换， qf 是快速修复窗口，trouble是错误窗口
+        sort_case_insensitive = false, -- used when sorting files and directories in the tree
+        sort_function = nil, -- 自定义一个排序函数
+        default_component_configs = {
+          container = {
+            enable_character_fade = true,
+          },
+          indent = {
+            indent_size = 2,
+            padding = 1, -- extra padding on left hand side
+            -- indent guides
+            with_markers = true,
+            indent_marker = '│',
+            last_indent_marker = '└',
+            highlight = 'NeoTreeIndentMarker',
+            -- expander config, needed for nesting files
+            with_expanders = nil, -- if nil and file nesting is enabled, will enable expanders
+            expander_collapsed = '',
+            expander_expanded = '',
+            expander_highlight = 'NeoTreeExpander',
+          },
+          icon = {
+            folder_closed = '',
+            folder_open = '',
+            folder_empty = '󰜌',
+            -- The next two settings are only a fallback, if you use nvim-web-devicons and configure default icons there
+            -- then these will never be used.
+            default = '*',
+            highlight = 'NeoTreeFileIcon',
+          },
+          modified = {
+            symbol = '[+]',
+            highlight = 'NeoTreeModified',
+          },
+          name = {
+            trailing_slash = false,
+            use_git_status_colors = true,
+            highlight = 'NeoTreeFileName',
+          },
+          git_status = {
+            symbols = {
+              -- Change type
+              added = '', -- or "✚", but this is redundant info if you use git_status_colors on the name
+              modified = '', -- or "", but this is redundant info if you use git_status_colors on the name
+              deleted = '✖', -- this can only be used in the git_status source
+              renamed = '󰁕', -- this can only be used in the git_status source
+              -- Status type
+              untracked = '',
+              ignored = '',
+              unstaged = '󰄱',
+              staged = '',
+              conflict = '',
+            },
+          },
+          -- If you don't want to use these columns, you can set `enabled = false` for each of them individually
+          file_size = {
+            enabled = true,
+            required_width = 64, -- min width of window required to show this column
+          },
+          type = {
+            enabled = true,
+            required_width = 122, -- min width of window required to show this column
+          },
+          last_modified = {
+            enabled = true,
+            required_width = 88, -- min width of window required to show this column
+          },
+          created = {
+            enabled = true,
+            required_width = 110, -- min width of window required to show this column
+          },
+          symlink_target = {
+            enabled = false,
+          },
+        },
+        commands = {},
+        window = {
+          position = 'left',
+          width = 40,
+          mapping_options = {
+            noremap = true,
+            nowait = true,
+          },
+          mappings = {
+            ['<space>'] = {
+              'toggle_node',
+              nowait = false, -- disable `nowait` if you have existing combos starting with this char that you want to use
+            },
+            ['<2-LeftMouse>'] = 'open',
+            ['<cr>'] = 'open',
+            ['<esc>'] = 'cancel', -- close preview or floating neo-tree window
+            ['P'] = { 'toggle_preview', config = { use_float = true, use_image_nvim = true } },
+            -- Read `# Preview Mode` for more information
+            ['l'] = 'focus_preview',
+            ['S'] = 'open_split',
+            ['s'] = 'open_vsplit',
+            -- ["S"] = "split_with_window_picker",
+            -- ["s"] = "vsplit_with_window_picker",
+            ['t'] = 'open_tabnew',
+            -- ["<cr>"] = "open_drop",
+            -- ["t"] = "open_tab_drop",
+            ['w'] = 'open_with_window_picker',
+            --["P"] = "toggle_preview", -- enter preview mode, which shows the current node without focusing
+            ['C'] = 'close_node',
+            -- ['C'] = 'close_all_subnodes',
+            ['z'] = 'close_all_nodes',
+            --["Z"] = "expand_all_nodes",
+            ['a'] = {
+              'add',
+              -- this command supports BASH style brace expansion ("x{a,b,c}" -> xa,xb,xc). see `:h neo-tree-file-actions` for details
+              -- some commands may take optional config options, see `:h neo-tree-mappings` for details
+              config = {
+                show_path = 'none', -- "none", "relative", "absolute"
+              },
+            },
+            ['A'] = 'add_directory', -- also accepts the optional config.show_path option like "add". this also supports BASH style brace expansion.
+            ['d'] = 'delete',
+            ['r'] = 'rename',
+            ['y'] = 'copy_to_clipboard',
+            ['x'] = 'cut_to_clipboard',
+            ['p'] = 'paste_from_clipboard',
+            ['c'] = 'copy', -- takes text input for destination, also accepts the optional config.show_path option like "add":
+            -- ["c"] = {
+            --  "copy",
+            --  config = {
+            --    show_path = "none" -- "none", "relative", "absolute"
+            --  }
+            --}
+            ['m'] = 'move', -- takes text input for destination, also accepts the optional config.show_path option like "add".
+            ['q'] = 'close_window',
+            ['R'] = 'refresh',
+            ['?'] = 'show_help',
+            ['<'] = 'prev_source', -- 在 git 视图， buffer视图等视图间切换
+            ['>'] = 'next_source',
+            ['i'] = 'show_file_details',
+          },
+        },
+        nesting_rules = {},
+        filesystem = {
+          filtered_items = {
+            visible = false, -- when true, they will just be displayed differently than normal items
+            hide_dotfiles = true,
+            hide_gitignored = true,
+            hide_hidden = true, -- only works on Windows for hidden files/directories
+            hide_by_name = {
+              --"node_modules"
+            },
+            hide_by_pattern = { -- uses glob style patterns
+              --"*.meta",
+              --"*/src/*/tsconfig.json",
+            },
+            always_show = { -- remains visible even if other settings would normally hide it
+              '.gitignored',
+            },
+            never_show = { -- remains hidden even if visible is toggled to true, this overrides always_show
+              '.DS_Store',
+              --"thumbs.db"
+            },
+            never_show_by_pattern = { -- uses glob style patterns
+              --".null-ls_*",
+            },
+          },
+          follow_current_file = {
+            enabled = false, -- This will find and focus the file in the active buffer every time
+            --               -- the current file is changed while the tree is open.
+            leave_dirs_open = false, -- `false` closes auto expanded dirs, such as with `:Neotree reveal`
+          },
+          group_empty_dirs = false, -- when true, empty folders will be grouped together
+          hijack_netrw_behavior = 'open_default', -- netrw disabled, opening a directory opens neo-tree
+          -- in whatever position is specified in window.position
+          -- "open_current",  -- netrw disabled, opening a directory opens within the
+          -- window like netrw would, regardless of window.position
+          -- "disabled",    -- netrw left alone, neo-tree does not handle opening dirs
+          use_libuv_file_watcher = false, -- This will use the OS level file watchers to detect changes
+          -- instead of relying on nvim autocmd events.
+          window = {
+            mappings = {
+              ['<bs>'] = 'navigate_up',
+              ['.'] = 'set_root',
+              ['H'] = 'toggle_hidden',
+              ['/'] = 'fuzzy_finder',
+              ['D'] = 'fuzzy_finder_directory',
+              ['#'] = 'fuzzy_sorter', -- fuzzy sorting using the fzy algorithm
+              -- ["D"] = "fuzzy_sorter_directory",
+              ['f'] = 'filter_on_submit',
+              ['<c-x>'] = 'clear_filter',
+              ['[g'] = 'prev_git_modified',
+              [']g'] = 'next_git_modified',
+              ['o'] = { 'show_help', nowait = false, config = { title = 'Order by', prefix_key = 'o' } },
+              ['oc'] = { 'order_by_created', nowait = false },
+              ['od'] = { 'order_by_diagnostics', nowait = false },
+              ['og'] = { 'order_by_git_status', nowait = false },
+              ['om'] = { 'order_by_modified', nowait = false },
+              ['on'] = { 'order_by_name', nowait = false },
+              ['os'] = { 'order_by_size', nowait = false },
+              ['ot'] = { 'order_by_type', nowait = false },
+            },
+            fuzzy_finder_mappings = { -- define keymaps for filter popup window in fuzzy_finder_mode
+              ['<down>'] = 'move_cursor_down',
+              ['<C-n>'] = 'move_cursor_down',
+              ['<up>'] = 'move_cursor_up',
+              ['<C-p>'] = 'move_cursor_up',
+            },
+          },
+          commands = {}, -- Add a custom command or override a global one using the same function name
+        },
+        git_status = {
+          window = {
+            position = 'float',
+            mappings = {
+              ['A'] = 'git_add_all',
+              ['gu'] = 'git_unstage_file',
+              ['ga'] = 'git_add_file',
+              ['gr'] = 'git_revert_file',
+              ['gc'] = 'git_commit',
+              ['gp'] = 'git_push',
+              ['gg'] = 'git_commit_and_push',
+              ['o'] = { 'show_help', nowait = false, config = { title = 'Order by', prefix_key = 'o' } },
+              ['oc'] = { 'order_by_created', nowait = false },
+              ['od'] = { 'order_by_diagnostics', nowait = false },
+              ['om'] = { 'order_by_modified', nowait = false },
+              ['on'] = { 'order_by_name', nowait = false },
+              ['os'] = { 'order_by_size', nowait = false },
+              ['ot'] = { 'order_by_type', nowait = false },
+            },
+          },
+        },
+        buffers = {
+          follow_current_file = {
+            enabled = true, -- This will find and focus the file in the active buffer every time
+            --              -- the current file is changed while the tree is open.
+            leave_dirs_open = false, -- `false` closes auto expanded dirs, such as with `:Neotree reveal`
+          },
+          group_empty_dirs = true, -- when true, empty folders will be grouped together
+          show_unloaded = true,
+          window = {
+            mappings = {
+              ['bd'] = 'buffer_delete',
+              ['<bs>'] = 'navigate_up',
+              ['.'] = 'set_root',
+              ['o'] = { 'show_help', nowait = false, config = { title = 'Order by', prefix_key = 'o' } },
+              ['oc'] = { 'order_by_created', nowait = false },
+              ['od'] = { 'order_by_diagnostics', nowait = false },
+              ['om'] = { 'order_by_modified', nowait = false },
+              ['on'] = { 'order_by_name', nowait = false },
+              ['os'] = { 'order_by_size', nowait = false },
+              ['ot'] = { 'order_by_type', nowait = false },
+            },
+          },
+        },
+      }
+      vim.keymap.set('n', '<leader>f', ':Neotree toggle<CR>', { desc = '打开文件浏览器' })
+    end,
+  },
   -- NOTE: Plugins can also be added by using a table,
   -- with the first argument being the link and the following
   -- keys can be used to configure plugin behavior/loading/etc.
@@ -375,7 +678,7 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
       vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
       vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
-      vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
+      vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] 在存在的buffer中搜索' })
 
       -- Slightly advanced example of overriding default behavior and theme
       vim.keymap.set('n', '<leader>/', function()
@@ -749,8 +1052,9 @@ require('lazy').setup({
     end,
   },
 
-  -- Highlight todo, notes, etc in comments
-  { 'folke/todo-comments.nvim', event = 'VimEnter', dependencies = { 'nvim-lua/plenary.nvim' }, opts = { signs = false } },
+  -- Highlight todo, notes, etc in comments, 需要有冒号才能触发
+  --
+  { 'folke/todo-comments.nvim', event = 'VimEnter', dependencies = { 'nvim-lua/plenary.nvim' }, opts = { signs = true } },
 
   { -- Collection of various small independent plugins/modules
     'echasnovski/mini.nvim',
@@ -794,7 +1098,7 @@ require('lazy').setup({
     'nvim-treesitter/nvim-treesitter',
     build = ':TSUpdate',
     opts = {
-      ensure_installed = { 'bash', 'c', 'html', 'lua', 'markdown', 'vim', 'vimdoc' },
+      ensure_installed = { 'bash', 'c', 'html', 'lua', 'markdown', 'vim', 'vimdoc', 'regex', 'markdown_inline', 'sql', 'go', 'rust', 'toml', 'yaml' },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
@@ -830,16 +1134,16 @@ require('lazy').setup({
   --  Here are some example plugins that I've included in the kickstart repository.
   --  Uncomment any of the lines below to enable them (you will need to restart nvim).
   --
-  -- require 'kickstart.plugins.debug',
-  -- require 'kickstart.plugins.indent_line',
-  -- require 'kickstart.plugins.lint',
+  require 'kickstart.plugins.debug',
+  require 'kickstart.plugins.indent_line',
+  require 'kickstart.plugins.lint',
 
   -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
   --    This is the easiest way to modularize your config.
   --
   --  Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
   --    For additional information, see `:help lazy.nvim-lazy.nvim-structuring-your-plugins`
-  -- { import = 'custom.plugins' },
+  { import = 'custom.plugins' },
 }, {
   ui = {
     -- If you have a Nerd Font, set icons to an empty table which will use the
