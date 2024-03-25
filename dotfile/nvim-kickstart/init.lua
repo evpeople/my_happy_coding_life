@@ -141,12 +141,104 @@ vim.opt.rtp:prepend(lazypath)
 require("lazy").setup({
 	-- NOTE: Plugins can be added with a link (or for a github repo: 'owner/repo' link).
 	"tpope/vim-sleuth", -- Detect tabstop and shiftwidth automatically
+	{
+		"nvim-neotest/neotest",
+		dependencies = {
+			"nvim-neotest/nvim-nio",
+			"nvim-lua/plenary.nvim",
+			"antoinemadec/FixCursorHold.nvim",
+			"nvim-treesitter/nvim-treesitter",
+		},
+		optional = true,
+		opts = function(_, opts)
+			opts.adapters = opts.adapters or {}
+			vim.list_extend(opts.adapters, {
+				require("rustaceanvim.neotest"),
+			})
+		end,
+	},
+	{
+		"kdheepak/lazygit.nvim",
+		cmd = {
+			"LazyGit",
+			"LazyGitConfig",
+			"LazyGitCurrentFile",
+			"LazyGitFilter",
+			"LazyGitFilterCurrentFile",
+		},
+		-- optional for floating window border decoration
+		dependencies = {
+			"nvim-lua/plenary.nvim",
+		},
+		-- setting the keybinding for LazyGit with 'keys' is recommended in
+		-- order to load the plugin when the command is run for the first time
+		keys = {
+			{ "<leader>lg", "<cmd>LazyGit<cr>", desc = "LazyGit" },
+		},
+	},
+	{
+		"akinsho/bufferline.nvim",
+		event = "VeryLazy",
+		keys = {
+			{ "<leader>bp", "<Cmd>BufferLineTogglePin<CR>", desc = "Toggle pin" },
+			{ "<leader>bP", "<Cmd>BufferLineGroupClose ungrouped<CR>", desc = "Delete non-pinned buffers" },
+			{ "<leader>bo", "<Cmd>BufferLineCloseOthers<CR>", desc = "Delete other buffers" },
+			{ "<leader>br", "<Cmd>BufferLineCloseRight<CR>", desc = "Delete buffers to the right" },
+			{ "<leader>bl", "<Cmd>BufferLineCloseLeft<CR>", desc = "Delete buffers to the left" },
+			{ "<S-h>", "<cmd>BufferLineCyclePrev<cr>", desc = "Prev buffer" },
+			{ "<S-l>", "<cmd>BufferLineCycleNext<cr>", desc = "Next buffer" },
+			{ "[b", "<cmd>BufferLineCyclePrev<cr>", desc = "Prev buffer" },
+			{ "]b", "<cmd>BufferLineCycleNext<cr>", desc = "Next buffer" },
+		},
+		opts = {
+			options = {
+      -- stylua: ignore
+      close_command = function(n) require("mini.bufremove").delete(n, false) end,
+      -- stylua: ignore
+      right_mouse_command = function(n) require("mini.bufremove").delete(n, false) end,
+				diagnostics = "nvim_lsp",
+				always_show_bufferline = false,
+				diagnostics_indicator = function(_, _, diag)
+					-- local icons = require("lazyvim.config").icons.diagnostics
+					local icons = {
+						Error = " ",
+						Warn = " ",
+						Hint = " ",
+						Info = " ",
+					}
+
+					local ret = (diag.error and icons.Error .. diag.error .. " " or "")
+						.. (diag.warning and icons.Warn .. diag.warning or "")
+					return vim.trim(ret)
+				end,
+				offsets = {
+					{
+						filetype = "neo-tree",
+						text = "Neo-tree",
+						highlight = "Directory",
+						text_align = "left",
+					},
+				},
+			},
+		},
+		config = function(_, opts)
+			require("bufferline").setup(opts)
+			-- Fix bufferline when restoring a session
+			vim.api.nvim_create_autocmd("BufAdd", {
+				callback = function()
+					vim.schedule(function()
+						pcall(nvim_bufferline)
+					end)
+				end,
+			})
+		end,
+	},
 
 	{
 		"saecki/crates.nvim",
 		event = { "BufRead Cargo.toml" },
 		config = function()
-			require("crates").setup()
+			require("crates").setup({})
 		end,
 	},
 	{
@@ -814,9 +906,23 @@ require("lazy").setup({
 					-- or a suggestion from your LSP for this to activate.
 					map("<leader>ca", vim.lsp.buf.code_action, "[C]ode [A]ction")
 
+					local function show_documentation()
+						local filetype = vim.bo.filetype
+						if vim.tbl_contains({ "vim", "help" }, filetype) then
+							vim.cmd("h " .. vim.fn.expand("<cword>"))
+						elseif vim.tbl_contains({ "man" }, filetype) then
+							vim.cmd("Man " .. vim.fn.expand("<cword>"))
+						elseif vim.fn.expand("%:t") == "Cargo.toml" and require("crates").popup_available() then
+							require("crates").show_popup()
+						else
+							vim.lsp.buf.hover()
+						end
+					end
+					--
+					-- vim.keymap.set("n", "K", show_documentation, { silent = true })
 					-- Opens a popup that displays documentation about the word under your cursor
 					--  See `:help K` for why this keymap
-					map("K", vim.lsp.buf.hover, "Hover Documentation")
+					map("K", show_documentation, "Hover Documentation")
 
 					-- WARN: This is not Goto Definition, this is Goto Declaration.
 					--  For example, in C this would take you to the header
@@ -1203,6 +1309,29 @@ require("lazy").setup({
 		},
 	},
 })
+local crates = require("crates")
+local opts = { silent = true }
 
+vim.keymap.set("n", "<leader>ct", crates.toggle, opts)
+vim.keymap.set("n", "<leader>cr", crates.reload, opts)
+
+vim.keymap.set("n", "<leader>cv", crates.show_versions_popup, opts)
+vim.keymap.set("n", "<leader>cf", crates.show_features_popup, opts)
+vim.keymap.set("n", "<leader>cd", crates.show_dependencies_popup, opts)
+
+vim.keymap.set("n", "<leader>cu", crates.update_crate, opts)
+vim.keymap.set("v", "<leader>cu", crates.update_crates, opts)
+vim.keymap.set("n", "<leader>ca", crates.update_all_crates, opts)
+vim.keymap.set("n", "<leader>cU", crates.upgrade_crate, opts)
+vim.keymap.set("v", "<leader>cU", crates.upgrade_crates, opts)
+vim.keymap.set("n", "<leader>cA", crates.upgrade_all_crates, opts)
+
+vim.keymap.set("n", "<leader>cx", crates.expand_plain_crate_to_inline_table, opts)
+vim.keymap.set("n", "<leader>cX", crates.extract_crate_into_table, opts)
+
+vim.keymap.set("n", "<leader>cH", crates.open_homepage, opts)
+vim.keymap.set("n", "<leader>cR", crates.open_repository, opts)
+vim.keymap.set("n", "<leader>cD", crates.open_documentation, opts)
+vim.keymap.set("n", "<leader>cC", crates.open_crates_io, opts)
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
