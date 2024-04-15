@@ -73,7 +73,27 @@ vim.opt.scrolloff = 10
 
 -- Set highlight on search, but clear on pressing <Esc> in normal mode
 vim.opt.hlsearch = true
+vim.wo.foldmethod = "expr"
+vim.wo.foldexpr = "nvim_treesitter#foldexpr()"
+vim.o.foldlevel = 99
+vim.wo.conceallevel = 1
+vim.opt.termguicolors = true
+vim.opt.autochdir = false
+-- 设置自动保存
+local autosave_group = vim.api.nvim_create_augroup("Autosave", { clear = true })
+vim.api.nvim_create_autocmd({ "BufLeave", "FocusLost", "TextChanged" }, {
+	group = autosave_group,
+	pattern = "*",
+	callback = function()
+		-- 使用`:silent`避免保存时显示消息
+		-- 使用`:wa`命令保存所有更改过的缓冲区
+		vim.cmd("silent! wa")
+	end,
+})
+
 vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>")
+vim.keymap.set("n", "<Tab>", ":bnext<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<S-Tab>", ":bprevious<CR>", { noremap = true, silent = true })
 
 -- Diagnostic keymaps
 vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, { desc = "Go to previous [D]iagnostic message" })
@@ -139,8 +159,52 @@ vim.opt.rtp:prepend(lazypath)
 --
 -- NOTE: Here is where you install your plugins.
 require("lazy").setup({
+
+	-- Neorg
+	{
+		"vhyrro/luarocks.nvim",
+		priority = 1000,
+		config = true,
+	},
+	{
+		"nvim-neorg/neorg",
+		dependencies = { "luarocks.nvim" },
+		lazy = false, -- Disable lazy loading as some `lazy.nvim` distributions set `lazy = true` by default
+		version = "*", -- Pin Neorg to the latest stable release
+		--[[ config = true, ]]
+		config = function()
+			require("neorg").setup({
+				load = {
+					["core.defaults"] = {},
+					["core.ui"] = {},
+					["core.ui.calendar"] = {},
+					["core.concealer"] = {
+						config = {
+							icon_preset = "diamond",
+							icons = {
+								code_block = { conceal = true },
+							},
+						},
+					}, -- Adds pretty icons to your documents
+					["core.dirman"] = {
+						config = {
+							workspaces = {
+								my_ws = "~/code/learn_norg/", -- Format: <name_of_workspace> = <path_to_workspace_root>
+							},
+							default_workspace = "my_ws",
+							index = "index.norg", -- The name of the main (root) .norg file
+						},
+					},
+				},
+			})
+		end,
+	},
 	-- NOTE: Plugins can be added with a link (or for a github repo: 'owner/repo' link).
 	"tpope/vim-sleuth", -- Detect tabstop and shiftwidth automatically
+	{
+		"sourcegraph/sg.nvim",
+		dependencies = { "nvim-lua/plenary.nvim" },
+	},
 	{
 		"nvim-neotest/neotest",
 		dependencies = {
@@ -172,7 +236,7 @@ require("lazy").setup({
 				"williamboman/mason.nvim",
 				opts = function(_, opts)
 					opts.ensure_installed = opts.ensure_installed or {}
-					vim.list_extend(opts.ensure_installed, { "gomodifytags", "impl" })
+					vim.list_extend(opts.ensure_installed, { "gomodifytags", "impl", "markdownlint", "marksman" })
 				end,
 			},
 		},
@@ -183,6 +247,7 @@ require("lazy").setup({
 				nls.builtins.code_actions.impl,
 				nls.builtins.formatting.goimports,
 				nls.builtins.formatting.gofumpt,
+				nls.builtins.diagnostics.markdownlint,
 			})
 		end,
 	},
@@ -299,7 +364,7 @@ require("lazy").setup({
 		version = "^4", -- Recommended
 		ft = { "rust" },
 	},
-	{ "lukas-reineke/indent-blankline.nvim", main = "ibl", opts = {} },
+	{ "ukas-reineke/indent-blankline.nvim", main = "ibl", opts = {} },
 	{ "nvim-neotest/nvim-nio" },
 	{
 		"nvim-lualine/lualine.nvim",
@@ -416,6 +481,15 @@ require("lazy").setup({
 			vim.fn.sign_define("DiagnosticSignInfo", { text = " ", texthl = "DiagnosticSignInfo" })
 			vim.fn.sign_define("DiagnosticSignHint", { text = "󰌵", texthl = "DiagnosticSignHint" })
 			require("neo-tree").setup({
+				event_handlers = {
+					{
+						event = "FileOpened",
+						handler = function(file_path)
+							-- 这将在打开文件时自动展示并定位到该文件
+							require("neo-tree.sources.manager").reveal_node(file_path)
+						end,
+					},
+				},
 				close_if_last_window = true, -- Close Neo-tree if it is the last window left in the tab
 				popup_border_style = "rounded",
 				enable_git_status = true,
@@ -583,7 +657,7 @@ require("lazy").setup({
 						},
 					},
 					follow_current_file = {
-						enabled = false, -- This will find and focus the file in the active buffer every time
+						enabled = true, -- This will find and focus the file in the active buffer every time
 						--               -- the current file is changed while the tree is open.
 						leave_dirs_open = false, -- `false` closes auto expanded dirs, such as with `:Neotree reveal`
 					},
@@ -648,6 +722,7 @@ require("lazy").setup({
 					},
 				},
 				buffers = {
+					bind_to_cwd = true,
 					follow_current_file = {
 						enabled = true, -- This will find and focus the file in the active buffer every time
 						--              -- the current file is changed while the tree is open.
@@ -1186,6 +1261,7 @@ require("lazy").setup({
 					--    https://github.com/L3MON4D3/LuaSnip?tab=readme-ov-file#keymaps
 				}),
 				sources = {
+					{ name = "cody" },
 					{ name = "nvim_lsp" },
 					{ name = "luasnip" },
 					{ name = "path" },
@@ -1203,6 +1279,17 @@ require("lazy").setup({
 		-- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`
 		"folke/tokyonight.nvim",
 		priority = 1000, -- make sure to load this before all the other start plugins
+		config = function()
+			require("tokyonight").setup({
+				-- style = "night",
+				-- transparent = true,
+				-- styles = { sidebars = "transparent", floats = "transparent" },
+				on_highlights = function(hl)
+					hl["@markup.italic"] = { style = "italic" }
+					-- hl["@markup.strikethrough"] = { style = "strikethrough" }
+				end,
+			})
+		end,
 		init = function()
 			-- Load the colorscheme here.
 			-- Like many other themes, this one has different styles, and you could load
