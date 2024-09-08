@@ -16,10 +16,12 @@ vim.g.have_nerd_font = true
 vim.opt.number = true
 -- You can also add relative line numbers, for help with jumping.
 --  Experiment for yourself to see if you like it!
--- vim.opt.relativenumber = true
+vim.opt.relativenumber = true
 
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.opt.mouse = "a"
+--  拼写检查
+vim.opt.spell = true
 
 -- Don't show the mode, since it's already in status line
 vim.opt.showmode = false
@@ -34,6 +36,7 @@ vim.opt.breakindent = true
 
 -- Save undo history
 vim.opt.undofile = true
+-- vim.opt.undorelad = 0
 
 -- Case-insensitive searching UNLESS \C or capital in search
 vim.opt.ignorecase = true
@@ -76,7 +79,7 @@ vim.opt.hlsearch = true
 vim.wo.foldmethod = "expr"
 vim.wo.foldexpr = "nvim_treesitter#foldexpr()"
 vim.o.foldlevel = 99
-vim.wo.conceallevel = 1
+vim.wo.conceallevel = 2
 vim.opt.termguicolors = true
 vim.opt.autochdir = false
 -- 设置自动保存
@@ -92,8 +95,8 @@ vim.api.nvim_create_autocmd({ "BufLeave", "FocusLost", "TextChanged" }, {
 })
 
 vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>")
-vim.keymap.set("n", "<Tab>", ":bnext<CR>", { noremap = true, silent = true })
-vim.keymap.set("n", "<S-Tab>", ":bprevious<CR>", { noremap = true, silent = true })
+-- vim.keymap.set("n", "<Tab>", ":bnext<CR>", { noremap = true, silent = true })
+-- vim.keymap.set("n", "<S-Tab>", ":bprevious<CR>", { noremap = true, silent = true })
 
 -- Diagnostic keymaps
 vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, { desc = "Go to previous [D]iagnostic message" })
@@ -123,7 +126,10 @@ vim.keymap.set("n", "<C-h>", "<C-w><C-h>", { desc = "Move focus to the left wind
 vim.keymap.set("n", "<C-l>", "<C-w><C-l>", { desc = "Move focus to the right window" })
 vim.keymap.set("n", "<C-j>", "<C-w><C-j>", { desc = "Move focus to the lower window" })
 vim.keymap.set("n", "<C-k>", "<C-w><C-k>", { desc = "Move focus to the upper window" })
-
+vim.keymap.set("c", "%%", function()
+	return "" .. vim.fn.expand("%:p:h") .. "/"
+end, { expr = true, desc = "expand the file path" })
+--
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
 
@@ -160,6 +166,110 @@ vim.opt.rtp:prepend(lazypath)
 -- NOTE: Here is where you install your plugins.
 require("lazy").setup({
 
+	{
+		"mrcjkb/rustaceanvim",
+		lazy = false,
+		init = function()
+			-- Configure rustaceanvim here
+			vim.g.rustaceanvim = {
+				-- Plugin configuration
+				tools = {},
+				-- LSP configuration
+				server = {
+					on_attach = function(client, bufnr)
+						local map = function(keys, func, desc)
+							vim.keymap.set("n", keys, func, { buffer = bufnr, desc = "LSP: " .. desc })
+						end
+
+						-- Jump to the definition of the word under your cursor.
+						--  This is where a variable was first declared, or where a function is defined, etc.
+						--  To jump back, press <C-t>.
+						map("gd", require("telescope.builtin").lsp_definitions, "[G]oto [D]efinition")
+
+						-- Find references for the word under your cursor.
+						map("gr", require("telescope.builtin").lsp_references, "[G]oto [R]eferences")
+
+						-- Jump to the implementation of the word under your cursor.
+						--  Useful when your language has ways of declaring types without an actual implementation.
+						map("gI", require("telescope.builtin").lsp_implementations, "[G]oto [I]mplementation")
+
+						-- Jump to the type of the word under your cursor.
+						--  Useful when you're not sure what type a variable is and you want to see
+						--  the definition of its *type*, not where it was *defined*.
+						map("<leader>D", require("telescope.builtin").lsp_type_definitions, "Type [D]efinition")
+
+						-- Fuzzy find all the symbols in your current document.
+						--  Symbols are things like variables, functions, types, etc.
+						map("<leader>ds", require("telescope.builtin").lsp_document_symbols, "[D]ocument [S]ymbols")
+
+						-- Fuzzy find all the symbols in your current workspace
+						--  Similar to document symbols, except searches over your whole project.
+						map(
+							"<leader>ws",
+							require("telescope.builtin").lsp_dynamic_workspace_symbols,
+							"[W]orkspace [S]ymbols"
+						)
+
+						-- Rename the variable under your cursor
+						--  Most Language Servers support renaming across files, etc.
+						map("<leader>rn", vim.lsp.buf.rename, "[R]e[n]ame")
+
+						-- Execute a code action, usually your cursor needs to be on top of an error
+						-- or a suggestion from your LSP for this to activate.
+						map("<leader>ca", vim.lsp.buf.code_action, "[C]ode [A]ction")
+
+						local function show_documentation()
+							local filetype = vim.bo.filetype
+							if vim.tbl_contains({ "vim", "help" }, filetype) then
+								vim.cmd("h " .. vim.fn.expand("<cword>"))
+							elseif vim.tbl_contains({ "man" }, filetype) then
+								vim.cmd("Man " .. vim.fn.expand("<cword>"))
+							elseif vim.fn.expand("%:t") == "Cargo.toml" and require("crates").popup_available() then
+								require("crates").show_popup()
+							else
+								vim.lsp.buf.hover()
+							end
+						end
+						--
+						-- vim.keymap.set("n", "K", show_documentation, { silent = true })
+						-- Opens a popup that displays documentation about the word under your cursor
+						--  See `:help K` for why this keymap
+						map("K", show_documentation, "Hover Documentation")
+
+						-- WARN: This is not Goto Definition, this is Goto Declaration.
+						--  For example, in C this would take you to the header
+						map("gD", vim.lsp.buf.declaration, "[G]oto [D]eclaration")
+
+						-- The following two autocommands are used to highlight references of the
+						-- word under your cursor when your cursor rests there for a little while.
+						--    See `:help CursorHold` for information about when this is executed
+						--
+						-- When you move your cursor, the highlights will be cleared (the second autocommand).
+						if client and client.server_capabilities.documentHighlightProvider then
+							vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
+								buffer = bufnr,
+								callback = vim.lsp.buf.document_highlight,
+							})
+
+							vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
+								buffer = bufnr,
+								callback = vim.lsp.buf.clear_references,
+							})
+						end
+						-- you can also put keymaps in here
+					end,
+					default_settings = {
+						-- rust-analyzer language server configuration
+						["rust-analyzer"] = {},
+					},
+				},
+				-- DAP configuration
+				dap = {},
+			}
+		end,
+		version = "^4", -- Recommended
+		ft = { "rust" },
+	},
 	-- Neorg
 	{
 		"vhyrro/luarocks.nvim",
@@ -177,7 +287,10 @@ require("lazy").setup({
 				load = {
 					["core.defaults"] = {},
 					["core.ui"] = {},
+					["core.completion"] = { config = { engine = "nvim-cmp", name = "[Norg]" } },
+					["core.integrations.nvim-cmp"] = {},
 					["core.ui.calendar"] = {},
+					["core.summary"] = {},
 					["core.concealer"] = {
 						config = {
 							icon_preset = "diamond",
@@ -189,7 +302,7 @@ require("lazy").setup({
 					["core.dirman"] = {
 						config = {
 							workspaces = {
-								my_ws = "~/code/learn_norg/", -- Format: <name_of_workspace> = <path_to_workspace_root>
+								my_ws = "~/code/my_neorg/", -- Format: <name_of_workspace> = <path_to_workspace_root>
 							},
 							default_workspace = "my_ws",
 							index = "index.norg", -- The name of the main (root) .norg file
@@ -270,63 +383,64 @@ require("lazy").setup({
 			{ "<leader>lg", "<cmd>LazyGit<cr>", desc = "LazyGit" },
 		},
 	},
-	{
-		"akinsho/bufferline.nvim",
-		event = "VeryLazy",
-		keys = {
-			{ "<leader>bp", "<Cmd>BufferLineTogglePin<CR>", desc = "Toggle pin" },
-			{ "<leader>bP", "<Cmd>BufferLineGroupClose ungrouped<CR>", desc = "Delete non-pinned buffers" },
-			{ "<leader>bo", "<Cmd>BufferLineCloseOthers<CR>", desc = "Delete other buffers" },
-			{ "<leader>br", "<Cmd>BufferLineCloseRight<CR>", desc = "Delete buffers to the right" },
-			{ "<leader>bl", "<Cmd>BufferLineCloseLeft<CR>", desc = "Delete buffers to the left" },
-			{ "<S-h>", "<cmd>BufferLineCyclePrev<cr>", desc = "Prev buffer" },
-			{ "<S-l>", "<cmd>BufferLineCycleNext<cr>", desc = "Next buffer" },
-			{ "[b", "<cmd>BufferLineCyclePrev<cr>", desc = "Prev buffer" },
-			{ "]b", "<cmd>BufferLineCycleNext<cr>", desc = "Next buffer" },
-		},
-		opts = {
-			options = {
-      -- stylua: ignore
-      close_command = function(n) require("mini.bufremove").delete(n, false) end,
-      -- stylua: ignore
-      right_mouse_command = function(n) require("mini.bufremove").delete(n, false) end,
-				diagnostics = "nvim_lsp",
-				always_show_bufferline = false,
-				diagnostics_indicator = function(_, _, diag)
-					-- local icons = require("lazyvim.config").icons.diagnostics
-					local icons = {
-						Error = " ",
-						Warn = " ",
-						Hint = " ",
-						Info = " ",
-					}
-
-					local ret = (diag.error and icons.Error .. diag.error .. " " or "")
-						.. (diag.warning and icons.Warn .. diag.warning or "")
-					return vim.trim(ret)
-				end,
-				offsets = {
-					{
-						filetype = "neo-tree",
-						text = "Neo-tree",
-						highlight = "Directory",
-						text_align = "left",
-					},
-				},
-			},
-		},
-		config = function(_, opts)
-			require("bufferline").setup(opts)
-			-- Fix bufferline when restoring a session
-			vim.api.nvim_create_autocmd("BufAdd", {
-				callback = function()
-					vim.schedule(function()
-						pcall(nvim_bufferline)
-					end)
-				end,
-			})
-		end,
-	},
+	-- {
+	-- 	"akinsho/bufferline.nvim",
+	-- 	event = "VeryLazy",
+	-- 	keys = {
+	-- 		{ "<leader>bp", "<Cmd>BufferLineTogglePin<CR>", desc = "Toggle pin" },
+	-- 		{ "<leader>bP", "<Cmd>BufferLineGroupClose ungrouped<CR>", desc = "Delete non-pinned buffers" },
+	-- 		{ "<leader>bo", "<Cmd>BufferLineCloseOthers<CR>", desc = "Delete other buffers" },
+	-- 		{ "<leader>br", "<Cmd>BufferLineCloseRight<CR>", desc = "Delete buffers to the right" },
+	-- 		{ "<leader>bl", "<Cmd>BufferLineCloseLeft<CR>", desc = "Delete buffers to the left" },
+	-- 		{ "<leader>bd", "<Cmd>bd<CR>", desc = "Delete now buffer" },
+	-- 		{ "<S-h>", "<cmd>BufferLineCyclePrev<cr>", desc = "Prev buffer" },
+	-- 		{ "<S-l>", "<cmd>BufferLineCycleNext<cr>", desc = "Next buffer" },
+	-- 		{ "[b", "<cmd>BufferLineCyclePrev<cr>", desc = "Prev buffer" },
+	-- 		{ "]b", "<cmd>BufferLineCycleNext<cr>", desc = "Next buffer" },
+	-- 	},
+	-- 	opts = {
+	-- 		options = {
+	--      -- stylua: ignore
+	--      close_command = function(n) require("mini.bufremove").delete(n, false) end,
+	--      -- stylua: ignore
+	--      right_mouse_command = function(n) require("mini.bufremove").delete(n, false) end,
+	-- 			diagnostics = "nvim_lsp",
+	-- 			always_show_bufferline = false,
+	-- 			diagnostics_indicator = function(_, _, diag)
+	-- 				-- local icons = require("lazyvim.config").icons.diagnostics
+	-- 				local icons = {
+	-- 					Error = " ",
+	-- 					Warn = " ",
+	-- 					Hint = " ",
+	-- 					Info = " ",
+	-- 				}
+	--
+	-- 				local ret = (diag.error and icons.Error .. diag.error .. " " or "")
+	-- 					.. (diag.warning and icons.Warn .. diag.warning or "")
+	-- 				return vim.trim(ret)
+	-- 			end,
+	-- 			offsets = {
+	-- 				{
+	-- 					filetype = "neo-tree",
+	-- 					text = "Neo-tree",
+	-- 					highlight = "Directory",
+	-- 					text_align = "left",
+	-- 				},
+	-- 			},
+	-- 		},
+	-- 	},
+	-- 	config = function(_, opts)
+	-- 		require("bufferline").setup(opts)
+	-- 		-- Fix bufferline when restoring a session
+	-- 		vim.api.nvim_create_autocmd("BufAdd", {
+	-- 			callback = function()
+	-- 				vim.schedule(function()
+	-- 					pcall(nvim_bufferline)
+	-- 				end)
+	-- 			end,
+	-- 		})
+	-- 	end,
+	-- },
 
 	{
 		"saecki/crates.nvim",
@@ -359,11 +473,6 @@ require("lazy").setup({
 			end,
 		},
 	},
-	{
-		"mrcjkb/rustaceanvim",
-		version = "^4", -- Recommended
-		ft = { "rust" },
-	},
 	{ "ukas-reineke/indent-blankline.nvim", main = "ibl", opts = {} },
 	{ "nvim-neotest/nvim-nio" },
 	{
@@ -379,6 +488,36 @@ require("lazy").setup({
 			})
 		end,
 		dependencies = { { "nvim-tree/nvim-web-devicons" } },
+	},
+	---@type LazySpec
+	{
+		"mikavilpas/yazi.nvim",
+		dependencies = {
+			"nvim-lua/plenary.nvim",
+		},
+		event = "VeryLazy",
+		keys = {
+			-- 👇 in this section, choose your own keymappings!
+			{
+				"<leader>-",
+				function()
+					require("yazi").yazi()
+				end,
+				desc = "Open the file manager",
+			},
+			{
+				-- Open in the current working directory
+				"<leader>cw",
+				function()
+					require("yazi").yazi(nil, vim.fn.getcwd())
+				end,
+				desc = "Open the file manager in nvim's working directory",
+			},
+		},
+		---@type YaziConfig
+		opts = {
+			open_for_directories = false,
+		},
 	},
 	-- lazy.nvim
 	{
@@ -971,11 +1110,17 @@ require("lazy").setup({
 			--    function will be executed to configure the current buffer
 			vim.api.nvim_create_autocmd("LspAttach", {
 				group = vim.api.nvim_create_augroup("kickstart-lsp-attach", { clear = true }),
+				-- NOTE: Remember that lua is a real programming language, and as such it is possible
+				-- to define small helper and utility functions so you don't have to repeat yourself
+				-- many times.
 				callback = function(event)
-					-- NOTE: Remember that lua is a real programming language, and as such it is possible
-					-- to define small helper and utility functions so you don't have to repeat yourself
-					-- many times.
-					--
+					-- local buf_ft = vim.api.nvim_buf_get_var(event.buf, "&filetype")
+					-- 两个c-w c-w 选中 hover window
+					local buf_ft = vim.bo.filetype
+					-- -- 检查是否为Rust文件，如果是，则不执行下面的映射设置
+					if buf_ft == "rust" then
+						return
+					end --
 					-- In this case, we create a function that lets us more easily define mappings specific
 					-- for LSP related items. It sets the mode, buffer and description for us each time.
 					local map = function(keys, func, desc)
@@ -1204,9 +1349,22 @@ require("lazy").setup({
 			-- See `:help cmp`
 			local cmp = require("cmp")
 			local luasnip = require("luasnip")
+			local compare = require("cmp.config.compare")
 			luasnip.config.setup({})
 
 			cmp.setup({
+				sorting = {
+					comparators = {
+						compare.sort_text,
+						compare.offset,
+						compare.exact,
+						compare.score,
+						compare.recently_used,
+						compare.kind,
+						compare.length,
+						compare.order,
+					},
+				},
 				snippet = {
 					expand = function(args)
 						luasnip.lsp_expand(args.body)
@@ -1261,12 +1419,12 @@ require("lazy").setup({
 					--    https://github.com/L3MON4D3/LuaSnip?tab=readme-ov-file#keymaps
 				}),
 				sources = {
-					{ name = "cody" },
 					{ name = "nvim_lsp" },
 					{ name = "luasnip" },
 					{ name = "path" },
 					{ name = "buffer" },
 					{ name = "crates" },
+					{ name = "neorg" },
 				},
 			})
 		end,
@@ -1281,7 +1439,7 @@ require("lazy").setup({
 		priority = 1000, -- make sure to load this before all the other start plugins
 		config = function()
 			require("tokyonight").setup({
-				-- style = "night",
+				vim.cmd([[colorscheme tokyonight]]),
 				-- transparent = true,
 				-- styles = { sidebars = "transparent", floats = "transparent" },
 				on_highlights = function(hl)
@@ -1294,8 +1452,6 @@ require("lazy").setup({
 			-- Load the colorscheme here.
 			-- Like many other themes, this one has different styles, and you could load
 			-- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-			vim.cmd.colorscheme("tokyonight-night")
-
 			-- You can configure highlights by doing something like
 			vim.cmd.hi("Comment gui=none")
 		end,
@@ -1400,6 +1556,23 @@ require("lazy").setup({
 
 	-- NOTE: Next step on your Neovim journey: Add/Configure additional plugins for kickstart
 	--
+	{
+		"liubianshi/cmp-lsp-rimels",
+		dependencies = {
+			"neovim/nvim-lspconfig",
+			"hrsh7th/nvim-cmp",
+			"hrsh7th/cmp-nvim-lsp",
+		},
+		config = function()
+			require("rimels").setup({
+				cmp_keymaps = {
+					disable = {
+						-- space = true,
+					},
+				},
+			})
+		end,
+	},
 	--  Here are some example plugins that I've included in the kickstart repository.
 	--  Uncomment any of the lines below to enable them (you will need to restart nvim).
 	--
@@ -1434,6 +1607,45 @@ require("lazy").setup({
 		},
 	},
 })
+-- local start_rime = function()
+-- 	local client_id = vim.lsp.start_client({
+-- 		name = "rime-ls",
+-- 		cmd = { "/Users/evpeople/code/rust/rime-ls/target/release" },
+-- 		init_options = {
+-- 			enabled = false, -- 初始关闭, 手动开启
+-- 			shared_data_dir = "/usr/share/rime-data", -- rime 公共目录
+-- 			user_data_dir = "~/.local/share/rime-ls", -- 指定用户目录, 最好新建一个
+-- 			log_dir = "~/.local/share/rime-ls", -- 日志目录
+-- 			max_candidates = 10, -- [v0.2.0 后不再有用] 与 rime 的候选数量配置最好保持一致
+-- 			paging_characters = { ",", ".", "-", "=" }, -- [since v0.2.4] 这些字符会强制触发一次补全，可用于翻页 见 issue #13
+-- 			trigger_characters = {}, -- 为空表示全局开启
+-- 			schema_trigger_character = "&", -- [since v0.2.0] 当输入此字符串时请求补全会触发 “方案选单”
+-- 			always_incomplete = false, -- [since v0.2.3] true 强制补全永远刷新整个列表，而不是使用过滤
+-- 			max_tokens = 0, -- [since v0.2.3] 大于 0 表示会在删除到这个字符个数的时候，重建所有候选词，而不使用删除字符操作
+-- 			preselect_first = false, -- [since v0.2.3] 是否默认第一个候选项是选中状态，default false
+-- 		},
+-- 	})
+-- 	vim.lsp.buf_attach_client(0, client_id)
+-- 	if client_id then
+-- 		vim.lsp.buf_attach_client(0, client_id)
+-- 		-- 快捷键手动开启
+-- 		-- before v0.1.2
+-- 		-- vim.keymap.set('n', '<leader><space>', function() vim.lsp.buf.execute_command({ command = "toggle-rime" }) end)
+-- 		-- since v0.1.2
+-- 		vim.keymap.set("n", "<leader>rs", function()
+-- 			vim.lsp.buf.execute_command({ command = "rime-ls.toggle-rime" })
+-- 		end)
+-- 		-- vim.keymap.set('n', '<leader>', function() vim.lsp.buf.execute_command({ command = "rime-ls.sync-user-data" }) end)
+-- 	end
+-- end
+-- -- 对每个文件都默认开启
+-- vim.api.nvim_create_autocmd("BufReadPost", {
+-- 	callback = function()
+-- 		start_rime()
+-- 	end,
+-- 	pattern = "*",
+-- })
+
 local crates = require("crates")
 
 local map = function(keys, func, desc)
@@ -1448,7 +1660,7 @@ map("<leader>cd", crates.show_dependencies_popup, "[C]rates [D]ependence")
 
 map("<leader>cu", crates.update_crate, "[C]rates [U]pdate")
 vim.keymap.set("v", "<leader>cu", crates.update_crates, { desc = "crates: update all  " })
-map("<leader>ca", crates.update_all_crates, "[C]rates update [A]ll")
+-- map("<leader>ca", crates.update_all_crates, "[C]rates update [A]ll")
 map("<leader>cU", crates.upgrade_crate, "[C]rates [U]pgrade")
 vim.keymap.set("v", "<leader>cU", crates.upgrade_crates, { desc = "crates upgrade all  " })
 map("<leader>cA", crates.upgrade_all_crates, "[C]reates, upgrade [A]ll")
@@ -1464,5 +1676,6 @@ map("<leader>cH", crates.open_homepage, "[C]rates [H]omepage")
 map("<leader>cR", crates.open_repository, "[C]rates [R]epostitory")
 map("<leader>cD", crates.open_documentation, "[C]rates [D]ocument")
 map("<leader>cC", crates.open_crates_io, "[C]rates open [C]rates.io")
+-- vim.g.rustaceanvim.tools.test_executor='background'
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
