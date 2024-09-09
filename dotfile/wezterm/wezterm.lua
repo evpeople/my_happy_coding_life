@@ -14,7 +14,7 @@ end
 config.font = wezterm.font("Hack Nerd Font Mono")
 config.font_size = 13
 config.window_background_opacity = 0.95
-config.macos_window_background_blur = 30
+config.macos_window_background_blur = 10
 config.window_decorations = "RESIZE"
 config.window_frame = {
 	font = wezterm.font({ family = "Hack Nerd Font Mono", weight = "Bold" }),
@@ -139,5 +139,18 @@ config.keys = {
 	-- Turn off the default CMD-m Hide action, allowing CMD-m to
 	-- be potentially recognized and handled by the tab
 	{ key = "Enter", mods = "ALT", action = wezterm.action.DisableDefaultAssignment },
+}
+config.window_background_image = "/Users/evpeople/.config/wezterm/output.png"
+
+config.window_background_image_hsb = {
+	-- Darken the background image by reducing it to 1/3rd
+	brightness = 0.05,
+
+	-- You can adjust the hue by scaling its value.
+	-- a multiplier of 1.0 leaves the value unchanged.
+	hue = 1.0,
+
+	-- You can adjust the saturation also.
+	saturation = 1.0,
 }
 return config
