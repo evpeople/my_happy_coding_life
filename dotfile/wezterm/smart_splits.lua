@@ -62,22 +62,22 @@ function module.apply_to_config(config)
 	local keys = {
 		{
 			key = "j",
-			mods = "LEADER",
+			mods = "CTRL",
 			action = move("j"),
 		},
 		{
 			key = "k",
-			mods = "LEADER",
+			mods = "CTRL",
 			action = move("k"),
 		},
 		{
 			key = "h",
-			mods = "LEADER",
+			mods = "CTRL",
 			action = move("h"),
 		},
 		{
 			key = "l",
-			mods = "LEADER",
+			mods = "CTRL",
 			action = move("l"),
 		},
 		{

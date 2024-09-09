@@ -2,6 +2,7 @@ local wezterm = require("wezterm")
 local appearance = require("appearance")
 local projects = require("projects")
 local smart_splits = require("smart_splits")
+local delete_key = require("delete_key")
 local act = wezterm.action
 local config = wezterm.config_builder()
 
@@ -131,6 +132,7 @@ config.keys = {
 }
 
 smart_splits.apply_to_config(config)
+delete_key.apply_to_config(config)
 
 -- add a local_config module for machine specific configuration that
 -- shouldn't be committed to the repo.
@@ -139,11 +141,11 @@ if has_local_config then
 	local_config.apply_to_config(config)
 end
 
-config.keys = {
-	-- Turn off the default CMD-m Hide action, allowing CMD-m to
-	-- be potentially recognized and handled by the tab
-	{ key = "Enter", mods = "ALT", action = wezterm.action.DisableDefaultAssignment },
-}
+-- config.keys = {
+-- 	-- Turn off the default CMD-m Hide action, allowing CMD-m to
+-- 	-- be potentially recognized and handled by the tab
+-- 	{ key = "Enter", mods = "ALT", action = wezterm.action.DisableDefaultAssignment },
+-- }
 config.window_background_image = "/Users/evpeople/.config/wezterm/output.png"
 
 config.window_background_image_hsb = {
@@ -157,4 +159,7 @@ config.window_background_image_hsb = {
 	-- You can adjust the saturation also.
 	saturation = 1.0,
 }
+config.use_fancy_tab_bar = false
+config.hide_tab_bar_if_only_one_tab = true
+
 return config
