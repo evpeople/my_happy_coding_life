@@ -5,11 +5,11 @@ local smart_splits = require("smart_splits")
 local act = wezterm.action
 local config = wezterm.config_builder()
 
-if appearance.is_dark() then
-	config.color_scheme = "Tokyo Night"
-else
-	config.color_scheme = "Tokyo Night Day"
-end
+-- if appearance.is_dark() then
+config.color_scheme = "Tokyo Night"
+-- else
+-- config.color_scheme = "Tokyo Night Day"
+-- end
 
 config.font = wezterm.font("Hack Nerd Font Mono")
 config.font = wezterm.font_with_fallback({
