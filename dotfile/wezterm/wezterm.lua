@@ -11,14 +11,18 @@ else
 	config.color_scheme = "Tokyo Night Day"
 end
 
-config.font = wezterm.font("Berkeley Mono")
+config.font = wezterm.font("Hack Nerd Font Mono")
 config.font_size = 13
-
+config.keys = {
+	-- Turn off the default CMD-m Hide action, allowing CMD-m to
+	-- be potentially recognized and handled by the tab
+	{ key = "Enter", mods = "ALT", action = wezterm.action.DisableDefaultAssignment },
+}
 config.window_background_opacity = 0.95
 config.macos_window_background_blur = 30
 config.window_decorations = "RESIZE"
 config.window_frame = {
-	font = wezterm.font({ family = "Berkeley Mono", weight = "Bold" }),
+	font = wezterm.font({ family = "Hack Nerd Font Mono", weight = "Bold" }),
 	font_size = 11,
 }
 
