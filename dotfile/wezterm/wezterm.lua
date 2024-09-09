@@ -13,11 +13,6 @@ end
 
 config.font = wezterm.font("Hack Nerd Font Mono")
 config.font_size = 13
-config.keys = {
-	-- Turn off the default CMD-m Hide action, allowing CMD-m to
-	-- be potentially recognized and handled by the tab
-	{ key = "Enter", mods = "ALT", action = wezterm.action.DisableDefaultAssignment },
-}
 config.window_background_opacity = 0.95
 config.macos_window_background_blur = 30
 config.window_decorations = "RESIZE"
@@ -140,4 +135,9 @@ if has_local_config then
 	local_config.apply_to_config(config)
 end
 
+config.keys = {
+	-- Turn off the default CMD-m Hide action, allowing CMD-m to
+	-- be potentially recognized and handled by the tab
+	{ key = "Enter", mods = "ALT", action = wezterm.action.DisableDefaultAssignment },
+}
 return config
