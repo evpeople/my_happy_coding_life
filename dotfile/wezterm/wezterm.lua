@@ -12,6 +12,10 @@ else
 end
 
 config.font = wezterm.font("Hack Nerd Font Mono")
+config.font = wezterm.font_with_fallback({
+	"Hack Nerd Font Mono",
+	"PingFang SC",
+})
 config.font_size = 13
 config.window_background_opacity = 0.95
 config.macos_window_background_blur = 10
